@@ -3,7 +3,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import LandingPage from "./pages/LandingPage";
+import ArtisanLogin from "./pages/artisan/ArtisanLogin";
+import ArtisanDashboard from "./pages/artisan/ArtisanDashboard";
+import RecordingScreen from "./pages/artisan/RecordingScreen";
+import ProcessingScreen from "./pages/artisan/ProcessingScreen";
+import ListingReview from "./pages/artisan/ListingReview";
+import BuyerFeed from "./pages/buyer/BuyerFeed";
+import ProductDetail from "./pages/buyer/ProductDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -15,8 +22,20 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* Artisan Flow */}
+          <Route path="/artisan" element={<ArtisanLogin />} />
+          <Route path="/artisan/dashboard" element={<ArtisanDashboard />} />
+          <Route path="/artisan/record" element={<RecordingScreen />} />
+          <Route path="/artisan/processing" element={<ProcessingScreen />} />
+          <Route path="/artisan/review" element={<ListingReview />} />
+          
+          {/* Buyer Flow */}
+          <Route path="/buyer" element={<BuyerFeed />} />
+          <Route path="/buyer/product/:id" element={<ProductDetail />} />
+          
+          {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
