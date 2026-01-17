@@ -66,7 +66,7 @@ const LandingPage = () => {
               whileHover={{ y: -8, scale: 1.02 }}
               transition={{ duration: 0.3 }}
               className="group relative overflow-hidden rounded-2xl bg-card shadow-card hover:shadow-elevated transition-all duration-300 cursor-pointer"
-              onClick={() => navigate("/buyer")}
+              onClick={() => navigate("/buyer/auth")}
             >
               <div className="aspect-[4/3] relative overflow-hidden">
                 <img
