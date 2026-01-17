@@ -8,6 +8,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import LandingPage from "./pages/LandingPage";
 import ArtisanLogin from "./pages/artisan/ArtisanLogin";
 import ArtisanDashboard from "./pages/artisan/ArtisanDashboard";
+import ArtisanProfile from "./pages/artisan/ArtisanProfile";
+import ArtisanMySales from "./pages/artisan/ArtisanMySales";
 import RecordingScreen from "./pages/artisan/RecordingScreen";
 import ProcessingScreen from "./pages/artisan/ProcessingScreen";
 import ListingReview from "./pages/artisan/ListingReview";
@@ -31,6 +33,8 @@ const App = () => (
             {/* Artisan Flow */}
             <Route path="/artisan" element={<ArtisanLogin />} />
             <Route path="/artisan/dashboard" element={<ArtisanDashboard />} />
+            <Route path="/artisan/profile" element={<ArtisanProfile />} />
+            <Route path="/artisan/my-sales" element={<ArtisanMySales />} />
             <Route path="/artisan/record" element={<RecordingScreen />} />
             <Route path="/artisan/processing" element={<ProcessingScreen />} />
             <Route path="/artisan/review" element={<ListingReview />} />
