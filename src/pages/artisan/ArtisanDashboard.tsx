@@ -105,13 +105,19 @@ const ArtisanDashboard = () => {
       {/* Bottom Navigation */}
       <nav className="bg-card border-t border-border py-3 px-4">
         <div className="max-w-md mx-auto flex justify-around">
-          <button className="flex flex-col items-center gap-1 text-primary">
+          <button 
+            onClick={() => navigate("/artisan/my-sales")}
+            className="flex flex-col items-center gap-1 text-primary"
+          >
             <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <span className="text-xs font-medium">My Sales</span>
           </button>
-          <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+          <button 
+            onClick={() => navigate("/artisan/profile")}
+            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
             <div className="w-10 h-10 rounded-full flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
