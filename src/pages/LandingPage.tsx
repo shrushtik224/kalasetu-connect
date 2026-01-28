@@ -1,10 +1,10 @@
 import { motion, Variants } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Mail, MapPin, Phone, Heart, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Logo from "@/components/ui/Logo";
 import handicraftImage from "@/assets/handicraft-display.jpg";
 import artisanHandsImage from "@/assets/artisan-hands.jpg";
+import siteLogo from "@/assets/logo/kalasetu-logo.jpg";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -29,12 +29,39 @@ const LandingPage = () => {
     },
   };
 
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background paper-texture">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-sm border-b border-border">
-        <div className="container mx-auto px-4 py-4">
-          <Logo size="sm" />
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => navigate("/")}
+          >
+            <img src={siteLogo} alt="KalaSetu" className="h-8 w-auto" />
+            <span className="font-serif text-xl font-bold text-foreground">KalaSetu</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-8">
+            <button 
+              onClick={() => scrollToSection('about')} 
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              About Us
+            </button>
+            <button 
+              onClick={() => scrollToSection('contact')} 
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+            >
+              Contact Us
+            </button>
+          </nav>
         </div>
       </header>
 
@@ -158,6 +185,86 @@ const LandingPage = () => {
           </motion.div>
         </motion.div>
       </main>
+
+      {/* About Us Section */}
+      <section id="about" className="py-20 bg-secondary/10 px-4 scroll-mt-20">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-4">About KalaSetu</h2>
+            <div className="w-24 h-1 bg-primary mx-auto rounded-full mb-6" />
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              KalaSetu is a digital bridge connecting India's rural artisans directly with global appreciators of art. 
+              We believe in fair trade, transparency, and preserving the rich cultural heritage of Indian craftsmanship.
+              By eliminating middlemen, we ensure that the true value of art reaches the hands that create it.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            {[
+              { icon: Globe, title: "Global Reach", desc: "Taking local crafts to the world stage" },
+              { icon: Heart, title: "Fair Trade", desc: "Direct earnings for artisan families" },
+              { icon: MapPin, title: "Traceable", desc: "Know the origin of every piece" },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2, duration: 0.5 }}
+                className="bg-background p-6 rounded-xl shadow-soft"
+              >
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <item.icon className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="font-serif text-xl mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Us Section */}
+      <section id="contact" className="py-20 px-4 scroll-mt-20">
+        <div className="container mx-auto max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-4">Contact Us</h2>
+            <p className="text-muted-foreground">We'd love to hear from you. Reach out to us for any queries.</p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+            <div className="flex items-center gap-4 p-6 bg-card rounded-xl shadow-soft hover:shadow-elevated transition-shadow">
+              <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center shrink-0">
+                <Mail className="w-6 h-6 text-accent" />
+              </div>
+              <div>
+                <p className="font-medium">Email Us</p>
+                <p className="text-muted-foreground">support@kalasetu.com</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-6 bg-card rounded-xl shadow-soft hover:shadow-elevated transition-shadow">
+              <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center shrink-0">
+                <Phone className="w-6 h-6 text-accent" />
+              </div>
+              <div>
+                <p className="font-medium">Call Us</p>
+                <p className="text-muted-foreground">+91 98765 43210</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="py-6 border-t border-border">
