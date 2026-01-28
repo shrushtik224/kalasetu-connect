@@ -81,8 +81,11 @@ const BuyerAuth = () => {
         });
 
         if (error) {
+          console.error("Login error:", error);
           if (error.message.includes("Invalid login credentials")) {
             toast.error("Invalid email or password. Please try again.");
+          } else if (error.message.includes("Failed to fetch")) {
+            toast.error("Connection error. Please check your internet connection or Supabase configuration.");
           } else {
             toast.error(error.message);
           }
@@ -106,9 +109,12 @@ const BuyerAuth = () => {
         });
 
         if (error) {
+          console.error("Signup error:", error);
           if (error.message.includes("already registered")) {
             toast.error("This email is already registered. Please sign in instead.");
             setIsLogin(true);
+          } else if (error.message.includes("Failed to fetch")) {
+            toast.error("Connection error. Please check your internet connection or Supabase configuration.");
           } else {
             toast.error(error.message);
           }
@@ -118,8 +124,9 @@ const BuyerAuth = () => {
         toast.success("Account created successfully! Welcome to KalaSetu.");
         navigate("/buyer");
       }
-    } catch (error) {
-      toast.error("Something went wrong. Please try again.");
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      toast.error(error.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
