@@ -16,6 +16,7 @@ import ListingReview from "./pages/artisan/ListingReview";
 import BuyerAuth from "./pages/buyer/BuyerAuth";
 import BuyerFeed from "./pages/buyer/BuyerFeed";
 import ProductDetail from "./pages/buyer/ProductDetail";
+ import OrderHistory from "./pages/buyer/OrderHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,11 @@ const App = () => (
                 <ProductDetail />
               </ProtectedRoute>
             } />
+             <Route path="/buyer/orders" element={
+               <ProtectedRoute>
+                 <OrderHistory />
+               </ProtectedRoute>
+             } />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
