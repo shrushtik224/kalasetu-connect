@@ -1,29 +1,96 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Check, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import madhubaniVase from "@/assets/madhubani-vase.jpg";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { insertProduct } from "@/integrations/supabase/products";
+import type { ProductDetails } from "@/integrations/sarvam/client";
+
+interface LocationState {
+  extractedData?: {
+    name?: string;
+    price?: string | number;
+    description?: string;
+    materials?: string[];
+    confidence?: number;
+  };
+  imageUrl?: string;
+  videoPath?: string;
+  transcript?: string;
+  productDetails?: ProductDetails;
+}
 
 const ListingReview = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [productName, setProductName] = useState("Hand-painted Madhubani Terra Vase");
-  const [price, setPrice] = useState("1,200");
-  const [isEditing, setIsEditing] = useState(false);
+  const { user } = useAuth();
 
-  const handlePublish = () => {
-    toast({
-      title: "🎉 सफलता! (Success!)",
-      description: "Your product is live to the world!",
-      duration: 4000,
-    });
-    setTimeout(() => {
-      navigate("/artisan/dashboard");
-    }, 2000);
+  // Get data passed from ProcessingScreen
+  const { extractedData, imageUrl: passedImageUrl, videoPath, productDetails } = (location.state || {}) as LocationState;
+
+  // Use productDetails from Sarvam AI if available, otherwise fallback to extractedData
+  const initialName = productDetails?.productName || extractedData?.name || "New Item";
+  const initialPrice = productDetails?.productPrice || extractedData?.price || "";
+  const initialDescription = productDetails?.productDescription || extractedData?.description || "";
+
+  const [productName, setProductName] = useState(initialName);
+  const [price, setPrice] = useState(String(initialPrice));
+  const [description, setDescription] = useState(initialDescription);
+  const [imageUrl, setImageUrl] = useState<string>(passedImageUrl || "");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+
+
+  const handlePublish = async () => {
+    if (!user?.id) {
+      toast({
+        variant: "destructive",
+        title: "त्रुटि (Error)",
+        description: "User not authenticated. Please login again.",
+        duration: 4000,
+      });
+      return;
+    }
+
+    setIsPublishing(true);
+
+    try {
+      // Insert product into database
+      await insertProduct(user.id, {
+        name: productName,
+        price: parseFloat(price) || 0,
+        description: description,
+        image_url: imageUrl || undefined,
+        video_path: videoPath || undefined,
+        status: "published",
+      });
+
+      toast({
+        title: "🎉 सफलता! (Success!)",
+        description: "Your product is live to the world!",
+        duration: 4000,
+      });
+
+      setTimeout(() => {
+        navigate("/artisan/dashboard");
+      }, 2000);
+    } catch (error: any) {
+      console.error("Error publishing product:", error);
+      toast({
+        variant: "destructive",
+        title: "त्रुटि (Error)",
+        description: error.message || "Failed to publish product. Please try again.",
+        duration: 4000,
+      });
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -54,13 +121,10 @@ const ListingReview = () => {
             className="relative aspect-square rounded-xl overflow-hidden shadow-card mb-6"
           >
             <img
-              src={madhubaniVase}
+              src={imageUrl || "/placeholder.svg"}
               alt="Product"
               className="w-full h-full object-cover"
             />
-            <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-white text-xs">
-              0:28
-            </div>
             <div className="absolute top-3 left-3">
               <Badge className="bg-success text-primary-foreground">
                 <Check className="w-3 h-3 mr-1" />
@@ -113,15 +177,11 @@ const ListingReview = () => {
                 Detected Material / पहचानी गई सामग्री
               </label>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary" className="bg-muted text-foreground px-3 py-1">
-                  Natural Clay
-                </Badge>
-                <Badge variant="secondary" className="bg-muted text-foreground px-3 py-1">
-                  Herbal Dyes
-                </Badge>
-                <Badge variant="secondary" className="bg-accent/20 text-accent-foreground px-3 py-1">
-                  Madhubani Art
-                </Badge>
+                {extractedData?.materials?.map((mat: string, i: number) => (
+                  <Badge key={i} variant="secondary" className="bg-muted text-foreground px-3 py-1">
+                    {mat}
+                  </Badge>
+                )) || <Badge variant="secondary">Unknown</Badge>}
               </div>
             </motion.div>
 
@@ -146,6 +206,19 @@ const ListingReview = () => {
               <p className="text-xs text-muted-foreground mt-2">
                 Based on similar items and your craft quality
               </p>
+            </motion.div>
+
+            {/* Description (Transcript) */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.55 }}
+              className="bg-card rounded-xl p-4 shadow-soft"
+            >
+              <label className="text-sm font-medium text-muted-foreground block mb-2">
+                Description / विवरण
+              </label>
+              <p className="text-sm text-foreground">{description}</p>
             </motion.div>
 
             {/* AI Confidence */}
@@ -181,14 +254,16 @@ const ListingReview = () => {
         >
           <Button
             onClick={handlePublish}
-            className="w-full h-14 text-lg font-semibold rounded-xl bg-success hover:bg-success/90 text-primary-foreground shadow-soft hover:shadow-elevated transition-all"
+            disabled={isPublishing}
+            className="w-full h-14 text-lg font-semibold rounded-xl bg-success hover:bg-success/90 text-primary-foreground shadow-soft hover:shadow-elevated transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Check className="w-5 h-5 mr-2" />
-            हाँ, यह सही है (Yes, Confirm & Publish)
+            {isPublishing ? "प्रकाशित कर रहा है..." : "हाँ, यह सही है (Yes, Confirm & Publish)"}
           </Button>
           <button
             onClick={() => navigate("/artisan/dashboard")}
-            className="w-full mt-3 text-center text-muted-foreground hover:text-foreground transition-colors text-sm"
+            disabled={isPublishing}
+            className="w-full mt-3 text-center text-muted-foreground hover:text-foreground transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             रद्द करें (Cancel)
           </button>

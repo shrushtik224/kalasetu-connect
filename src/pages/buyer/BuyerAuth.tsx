@@ -22,16 +22,20 @@ const BuyerAuth = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
 
-  // Check if user is already logged in
+  // Check if user is already logged in + clear stale sessions
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[BuyerAuth] Auth state:", event, session?.user?.email ?? "no user");
       if (session?.user) {
         navigate("/buyer");
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.log("[BuyerAuth] Stale session detected, clearing...");
+        supabase.auth.signOut().catch(() => { });
+      } else if (session?.user) {
         navigate("/buyer");
       }
     });
@@ -68,36 +72,42 @@ const BuyerAuth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log("[BuyerAuth] Attempting sign in for:", email);
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) {
-          console.error("Login error:", error);
-          if (error.message.includes("Invalid login credentials")) {
+          console.error("[BuyerAuth] Login error:", error);
+          const msg = error.message || String(error);
+          if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
+            toast.error("Cannot connect to the server. Please check your internet connection.");
+          } else if (msg.includes("Invalid login credentials")) {
             toast.error("Invalid email or password. Please try again.");
-          } else if (error.message.includes("Failed to fetch")) {
-            toast.error("Connection error. Please check your internet connection or Supabase configuration.");
+          } else if (msg.includes("Email not confirmed")) {
+            toast.error("Please confirm your email address to log in. Check your inbox.");
           } else {
-            toast.error(error.message);
+            toast.error(msg);
           }
           return;
         }
 
+        console.log("[BuyerAuth] Sign in success:", data?.user?.email);
         toast.success("Welcome back!");
         navigate("/buyer");
       } else {
+        console.log("[BuyerAuth] Attempting sign up for:", email);
         const redirectUrl = `${window.location.origin}/buyer`;
-        
-        const { error } = await supabase.auth.signUp({
+
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -109,24 +119,42 @@ const BuyerAuth = () => {
         });
 
         if (error) {
-          console.error("Signup error:", error);
-          if (error.message.includes("already registered")) {
+          console.error("[BuyerAuth] Signup error:", error);
+          const msg = error.message || String(error);
+          if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
+            toast.error("Cannot connect to the server. Please check your internet connection.");
+          } else if (msg.includes("already registered") || msg.includes("already been registered")) {
             toast.error("This email is already registered. Please sign in instead.");
             setIsLogin(true);
-          } else if (error.message.includes("Failed to fetch")) {
-            toast.error("Connection error. Please check your internet connection or Supabase configuration.");
           } else {
-            toast.error(error.message);
+            toast.error(msg);
           }
           return;
         }
 
-        toast.success("Account created successfully! Welcome to KalaSetu.");
-        navigate("/buyer");
+        // Detect the silent failure: Supabase returns success but empty identities
+        // when user already exists + email confirmation is enabled
+        if (data?.user && data.user.identities && data.user.identities.length === 0) {
+          console.warn("[BuyerAuth] Empty identities - user likely already exists");
+          toast.error("An account with this email may already exist. Please try signing in.");
+          setIsLogin(true);
+          return;
+        }
+
+        // Check if user was auto-confirmed (session exists immediately)
+        if (data?.session) {
+          console.log("[BuyerAuth] Auto-confirmed, user is logged in!");
+          toast.success("Account created! Welcome!");
+          navigate("/buyer");
+        } else {
+          console.log("[BuyerAuth] Sign up success, email confirmation needed.");
+          toast.success("Account created! Please check your email for a confirmation link.");
+          setIsLogin(true);
+        }
       }
     } catch (error: any) {
-      console.error("Auth error:", error);
-      toast.error(error.message || "Something went wrong. Please try again.");
+      console.error("[BuyerAuth] Unexpected error:", error);
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -168,21 +196,19 @@ const BuyerAuth = () => {
             <div className="flex bg-muted rounded-xl p-1 mb-6">
               <button
                 onClick={() => setIsLogin(true)}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-                  isLogin
-                    ? "bg-background text-foreground shadow-soft"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${isLogin
+                  ? "bg-background text-foreground shadow-soft"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 Sign In
               </button>
               <button
                 onClick={() => setIsLogin(false)}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-                  !isLogin
-                    ? "bg-background text-foreground shadow-soft"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${!isLogin
+                  ? "bg-background text-foreground shadow-soft"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 Sign Up
               </button>

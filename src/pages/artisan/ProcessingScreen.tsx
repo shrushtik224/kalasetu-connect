@@ -1,17 +1,47 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import type { ProductDetails } from "@/integrations/sarvam/client";
+
+interface LocationState {
+  transcript?: string;
+  videoPath?: string;
+  imageUrl?: string;
+  productDetails?: ProductDetails;
+}
 
 const ProcessingScreen = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { transcript, videoPath, imageUrl, productDetails } = (location.state || {}) as LocationState;
 
   useEffect(() => {
+    // Map productDetails to the format ListingReview expects
+    const extractedData = productDetails
+      ? {
+        name: productDetails.productName || "Handcrafted Item",
+        price: productDetails.productPrice || "",
+        description: productDetails.productDescription || transcript || "",
+      }
+      : {
+        name: "Handcrafted Item",
+        price: "",
+        description: transcript || "",
+      };
+
     const timer = setTimeout(() => {
-      navigate("/artisan/review");
-    }, 3000);
+      navigate("/artisan/review", {
+        state: {
+          extractedData,
+          videoPath,
+          imageUrl,
+          transcript
+        }
+      });
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [navigate]);
+  }, [navigate, transcript, videoPath, imageUrl, productDetails]);
 
   return (
     <div className="min-h-screen bg-background paper-texture flex flex-col items-center justify-center px-4">
@@ -24,7 +54,7 @@ const ProcessingScreen = () => {
       >
         {/* Outer glow */}
         <div className="absolute inset-0 -m-4 bg-primary/20 rounded-full blur-xl animate-pulse" />
-        
+
         {/* Spinning container */}
         <motion.div
           animate={{ rotate: 360 }}
@@ -94,10 +124,10 @@ const ProcessingScreen = () => {
         className="text-center"
       >
         <h2 className="font-serif text-2xl md:text-3xl text-foreground mb-3">
-          हमारी AI आपकी कहानी सुन रही है...
+          Preparing Your Product Listing...
         </h2>
         <p className="text-muted-foreground">
-          Our AI is listening to your story...
+          Extracting product name, price, and details from your recording
         </p>
       </motion.div>
 
@@ -137,21 +167,21 @@ const ProcessingScreen = () => {
           transition={{ repeat: Infinity, duration: 2 }}
           className="text-sm text-muted-foreground"
         >
-          ✓ वीडियो प्राप्त हुआ (Video received)
+          ✓ Audio transcribed
         </motion.p>
         <motion.p
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
           className="text-sm text-muted-foreground"
         >
-          ⟳ भाषा समझ रहे हैं (Understanding language)
+          ⟳ Parsing product details
         </motion.p>
         <motion.p
           animate={{ opacity: [0.3, 0.5, 0.3] }}
           transition={{ repeat: Infinity, duration: 2, delay: 1 }}
           className="text-sm text-muted-foreground/60"
         >
-          ○ कीमत तय कर रहे हैं (Calculating price)
+          ○ Loading review form
         </motion.p>
       </motion.div>
     </div>

@@ -1,31 +1,122 @@
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, MapPin, Phone, Mail, Edit2 } from "lucide-react";
+import { ArrowLeft, User, MapPin, Phone, Mail, Edit2, Camera, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/Logo";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import artisanPortrait from "@/assets/artisan-portrait.jpg";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const ArtisanProfile = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useLanguage();
 
-  // Mock artisan data - will be replaced with real data from database
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (!error && data) {
+        setProfile(data);
+        setAvatarUrl(data.avatar_url || null);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image too large. Please select an image under 5MB.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadSuccess(false);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/avatar_${Date.now()}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("product_images")
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (uploadError) throw new Error(uploadError.message);
+
+      const { data: urlData } = supabase.storage
+        .from("product_images")
+        .getPublicUrl(uploadData.path);
+
+      const publicUrl = urlData.publicUrl;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", user.id);
+
+      if (updateError) throw new Error(updateError.message);
+
+      setAvatarUrl(publicUrl);
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 2000);
+      console.log("Avatar updated:", publicUrl);
+    } catch (error: any) {
+      console.error("Avatar upload failed:", error);
+      alert("Failed to upload: " + error.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // Fallback mock data if profile not loaded yet
   const artisan = {
-    name: "Ramesh Kumar",
-    nameHindi: "रमेश कुमार",
-    location: "Bihar, India",
-    locationHindi: "बिहार, भारत",
-    phone: "+91 98765 43210",
-    email: "ramesh.artisan@email.com",
-    craft: "Madhubani Painting",
-    craftHindi: "मधुबनी पेंटिंग",
-    experience: "15 years",
-    experienceHindi: "15 साल",
-    bio: "Traditional Madhubani artist specializing in folk art patterns passed down through generations.",
-    bioHindi: "पारंपरिक मधुबनी कलाकार, पीढ़ियों से चली आ रही लोक कला में विशेषज्ञ।"
+    name: profile?.full_name || "Artisan",
+    location: profile?.location || "India",
+    phone: profile?.phone || user?.phone || "+91 XXXXX XXXXX",
+    email: user?.email || "artisan@kalasetu.com",
+    craft: profile?.craft || "Traditional Craft",
+    experience: profile?.experience || "Experienced",
+    bio: profile?.bio || "An artisan on KalaSetu platform creating traditional handmade crafts.",
   };
 
   return (
     <div className="min-h-screen bg-background paper-texture flex flex-col">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="hidden"
+        onChange={handleAvatarUpload}
+      />
+
       {/* Header */}
       <header className="p-4 flex items-center gap-4 border-b border-border">
         <Button
@@ -37,8 +128,8 @@ const ArtisanProfile = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-lg font-serif font-semibold">प्रोफ़ाइल</h1>
-          <p className="text-xs text-muted-foreground">Profile</p>
+          <h1 className="text-lg font-serif font-semibold">{t.profileTitle}</h1>
+          <p className="text-xs text-muted-foreground">{t.profile}</p>
         </div>
         <Logo size="sm" showText={false} />
       </header>
@@ -55,23 +146,50 @@ const ArtisanProfile = () => {
           <div className="flex flex-col items-center mb-6">
             <div className="relative">
               <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary shadow-elevated">
-                <img
-                  src={artisanPortrait}
-                  alt={artisan.name}
-                  className="w-full h-full object-cover"
-                />
+                {uploading ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  </div>
+                ) : (
+                  <img
+                    src={avatarUrl || artisanPortrait}
+                    alt={artisan.name}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
+
+              {/* Camera / edit button overlaid on the avatar */}
               <Button
                 size="icon"
-                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-accent hover:bg-accent/90"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={`absolute bottom-0 right-0 w-9 h-9 rounded-full shadow-md transition-all ${uploadSuccess
+                  ? "bg-green-500 hover:bg-green-600"
+                  : "bg-accent hover:bg-accent/90"
+                  }`}
               >
-                <Edit2 className="w-4 h-4" />
+                {uploadSuccess ? (
+                  <Check className="w-4 h-4 text-white" />
+                ) : (
+                  <Camera className="w-4 h-4 text-white" />
+                )}
               </Button>
             </div>
+
             <h2 className="mt-4 text-xl font-serif font-bold text-foreground">
-              {artisan.nameHindi}
+              {artisan.name}
             </h2>
-            <p className="text-sm text-muted-foreground">{artisan.name}</p>
+            <p className="text-sm text-muted-foreground">{artisan.email}</p>
+
+            {/* Upload hint */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              <Camera className="w-3 h-3" />
+              {t.tapChangePhoto}
+            </button>
           </div>
 
           {/* Profile Details */}
@@ -88,9 +206,8 @@ const ArtisanProfile = () => {
                   <MapPin className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">स्थान / Location</p>
-                  <p className="font-medium">{artisan.locationHindi}</p>
-                  <p className="text-sm text-muted-foreground">{artisan.location}</p>
+                  <p className="text-sm text-muted-foreground">{t.location}</p>
+                  <p className="font-medium">{artisan.location}</p>
                 </div>
               </div>
             </motion.div>
@@ -107,9 +224,8 @@ const ArtisanProfile = () => {
                   <User className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">कला / Craft</p>
-                  <p className="font-medium">{artisan.craftHindi}</p>
-                  <p className="text-sm text-muted-foreground">{artisan.craft}</p>
+                  <p className="text-sm text-muted-foreground">{t.craft}</p>
+                  <p className="font-medium">{artisan.craft}</p>
                 </div>
               </div>
             </motion.div>
@@ -126,9 +242,8 @@ const ArtisanProfile = () => {
                   <span className="text-primary font-bold">★</span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">अनुभव / Experience</p>
-                  <p className="font-medium">{artisan.experienceHindi}</p>
-                  <p className="text-sm text-muted-foreground">{artisan.experience}</p>
+                  <p className="text-sm text-muted-foreground">{t.experience}</p>
+                  <p className="font-medium">{artisan.experience}</p>
                 </div>
               </div>
             </motion.div>
@@ -140,7 +255,7 @@ const ArtisanProfile = () => {
               transition={{ delay: 0.4 }}
               className="bg-card rounded-xl p-4 shadow-soft space-y-3"
             >
-              <p className="text-sm font-medium text-muted-foreground">संपर्क जानकारी / Contact</p>
+              <p className="text-sm font-medium text-muted-foreground">{t.contact}</p>
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-muted-foreground" />
                 <p className="text-sm">{artisan.phone}</p>
@@ -158,24 +273,36 @@ const ArtisanProfile = () => {
               transition={{ delay: 0.5 }}
               className="bg-card rounded-xl p-4 shadow-soft"
             >
-              <p className="text-sm font-medium text-muted-foreground mb-2">परिचय / About</p>
-              <p className="text-sm leading-relaxed">{artisan.bioHindi}</p>
-              <p className="text-xs text-muted-foreground mt-2">{artisan.bio}</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">{t.about}</p>
+              <p className="text-sm leading-relaxed">{artisan.bio}</p>
             </motion.div>
           </div>
 
-          {/* Edit Profile Button */}
+          {/* Upload Photo Button */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
             className="mt-6"
           >
-            <Button className="w-full" size="lg">
-              <Edit2 className="w-4 h-4 mr-2" />
-              प्रोफ़ाइल संपादित करें
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {t.uploading}
+                </>
+              ) : (
+                <>
+                  <Camera className="w-4 h-4 mr-2" />
+                  {t.uploadPhoto}
+                </>
+              )}
             </Button>
-            <p className="text-center text-xs text-muted-foreground mt-2">Edit Profile</p>
           </motion.div>
         </motion.div>
       </main>

@@ -1,34 +1,66 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Video, Package, IndianRupee, TrendingUp, Calendar } from "lucide-react";
+import { ArrowLeft, Video, Package, IndianRupee, TrendingUp, Calendar, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Logo from "@/components/ui/Logo";
+import { useAuth } from "@/hooks/useAuth";
+import { getUserProducts } from "@/integrations/supabase/products";
+
+interface Product {
+  id: number;
+  name: string;
+  price: string;
+  description: string | null;
+  image_url: string | null;
+  video_path: string | null;
+  status: string;
+  created_at: string;
+}
 
 const ArtisanMySales = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - will be replaced with real data from database
-  const uploadedVideos = [
-    { id: 1, title: "मधुबनी फूलदान", date: "15 जनवरी 2026", status: "सक्रिय", views: 234 },
-    { id: 2, title: "हाथ से बुनी टोकरी", date: "10 जनवरी 2026", status: "सक्रिय", views: 156 },
-    { id: 3, title: "टेराकोटा मूर्ति", date: "5 जनवरी 2026", status: "बिक गया", views: 89 },
-    { id: 4, title: "कांस्य दीपक", date: "1 जनवरी 2026", status: "बिक गया", views: 312 },
-  ];
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!user?.id) return;
+      try {
+        const data = await getUserProducts(user.id);
+        setProducts(data || []);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const soldItems = [
-    { id: 1, title: "टेराकोटा मूर्ति", buyer: "प्रिया शर्मा", price: 1500, date: "12 जनवरी 2026" },
-    { id: 2, title: "कांस्य दीपक", buyer: "राहुल वर्मा", price: 2200, date: "8 जनवरी 2026" },
-    { id: 3, title: "मधुबनी पेंटिंग", buyer: "अंजलि गुप्ता", price: 3500, date: "3 जनवरी 2026" },
-    { id: 4, title: "हाथ से बुना दुपट्टा", buyer: "सुनीता देवी", price: 1800, date: "28 दिसंबर 2025" },
-    { id: 5, title: "लकड़ी की मूर्ति", buyer: "विकास सिंह", price: 2500, date: "20 दिसंबर 2025" },
-  ];
+    fetchProducts();
+  }, [user]);
 
-  const earnings = {
-    total: 45500,
-    thisMonth: 12450,
-    lastMonth: 18200,
-    pending: 4800,
+  const activeProducts = products.filter(p => p.status === "published");
+  const soldProducts = products.filter(p => p.status === "sold");
+
+  const totalEarnings = soldProducts.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
+  const thisMonthProducts = products.filter(p => {
+    const created = new Date(p.created_at);
+    const now = new Date();
+    return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+  });
+  const thisMonthEarnings = thisMonthProducts
+    .filter(p => p.status === "sold")
+    .reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("hi-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   };
 
   return (
@@ -61,10 +93,10 @@ const ArtisanMySales = () => {
           >
             <div className="flex items-center gap-2 mb-1">
               <IndianRupee className="w-4 h-4 text-primary" />
-              <span className="text-xs text-muted-foreground">कुल कमाई</span>
+              <span className="text-xs text-muted-foreground">कुल सामान</span>
             </div>
-            <p className="text-xl font-serif font-bold text-primary">₹{earnings.total.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">Total Earnings</p>
+            <p className="text-xl font-serif font-bold text-primary">{products.length}</p>
+            <p className="text-xs text-muted-foreground">Total Products</p>
           </motion.div>
 
           <motion.div
@@ -75,184 +107,169 @@ const ArtisanMySales = () => {
           >
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="w-4 h-4 text-accent" />
-              <span className="text-xs text-muted-foreground">इस महीने</span>
+              <span className="text-xs text-muted-foreground">सक्रिय</span>
             </div>
-            <p className="text-xl font-serif font-bold text-accent">₹{earnings.thisMonth.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">This Month</p>
+            <p className="text-xl font-serif font-bold text-accent">{activeProducts.length}</p>
+            <p className="text-xs text-muted-foreground">Active Listings</p>
           </motion.div>
         </div>
       </div>
 
-      {/* Tabs Content */}
+      {/* Main Content */}
       <div className="flex-1 px-4 pb-4 overflow-hidden">
-        <Tabs defaultValue="videos" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="videos" className="text-xs">
-              <Video className="w-3 h-3 mr-1" />
-              वीडियो
+        <Tabs defaultValue="products" className="h-full flex flex-col">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="products" className="text-xs">
+              <Package className="w-3 h-3 mr-1" />
+              मेरे सामान
             </TabsTrigger>
             <TabsTrigger value="sold" className="text-xs">
-              <Package className="w-3 h-3 mr-1" />
-              बिक्री
-            </TabsTrigger>
-            <TabsTrigger value="earnings" className="text-xs">
               <IndianRupee className="w-3 h-3 mr-1" />
-              कमाई
+              बिक्री
             </TabsTrigger>
           </TabsList>
 
-          {/* Uploaded Videos Tab */}
-          <TabsContent value="videos" className="flex-1 overflow-y-auto space-y-3 mt-0">
+          {/* Products Tab */}
+          <TabsContent value="products" className="flex-1 overflow-y-auto space-y-3 mt-0">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium">अपलोड किए गए वीडियो</p>
-              <p className="text-xs text-muted-foreground">{uploadedVideos.length} वीडियो</p>
+              <p className="text-sm font-medium">मेरे उत्पाद</p>
+              <p className="text-xs text-muted-foreground">{products.length} products</p>
             </div>
-            {uploadedVideos.map((video, index) => (
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : products.length === 0 ? (
               <motion.div
-                key={video.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-card rounded-xl p-4 shadow-soft"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-12"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium">{video.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{video.date}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{video.views} देखे गए</p>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    video.status === "सक्रिय" 
-                      ? "bg-green-100 text-green-700" 
-                      : "bg-primary/10 text-primary"
-                  }`}>
-                    {video.status}
-                  </span>
-                </div>
+                <Video className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground font-medium">कोई उत्पाद नहीं</p>
+                <p className="text-sm text-muted-foreground mt-1">No products yet. Record a video to add your first product!</p>
+                <Button
+                  onClick={() => navigate("/artisan/record")}
+                  className="mt-4 bg-primary"
+                >
+                  <Video className="w-4 h-4 mr-2" />
+                  Record Video
+                </Button>
               </motion.div>
-            ))}
+            ) : (
+              products.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.08 }}
+                  className="bg-card rounded-xl shadow-soft overflow-hidden"
+                >
+                  <div className="flex">
+                    {/* Product Image */}
+                    <div className="w-24 h-24 flex-shrink-0 bg-muted">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product Details */}
+                    <div className="flex-1 p-3 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <p className="font-medium text-sm line-clamp-1">{product.name}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ml-2 flex-shrink-0 ${product.status === "published"
+                              ? "bg-green-100 text-green-700"
+                              : product.status === "sold"
+                                ? "bg-primary/10 text-primary"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}>
+                            {product.status === "published" ? "सक्रिय" : product.status === "sold" ? "बिक गया" : product.status}
+                          </span>
+                        </div>
+                        {product.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{product.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm font-serif font-bold text-primary">₹{parseFloat(product.price).toLocaleString()}</p>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">{formatDate(product.created_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </TabsContent>
 
           {/* Sold Items Tab */}
           <TabsContent value="sold" className="flex-1 overflow-y-auto space-y-3 mt-0">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-medium">बिके हुए सामान</p>
-              <p className="text-xs text-muted-foreground">{soldItems.length} सामान</p>
+              <p className="text-xs text-muted-foreground">{soldProducts.length} sold</p>
             </div>
-            {soldItems.map((item, index) => (
+
+            {soldProducts.length === 0 ? (
               <motion.div
-                key={item.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-card rounded-xl p-4 shadow-soft"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-12"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      खरीदार: {item.buyer}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{item.date}</span>
+                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground font-medium">अभी तक कोई बिक्री नहीं</p>
+                <p className="text-sm text-muted-foreground mt-1">No sales yet. Your products will appear here once sold.</p>
+              </motion.div>
+            ) : (
+              soldProducts.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.08 }}
+                  className="bg-card rounded-xl shadow-soft overflow-hidden"
+                >
+                  <div className="flex">
+                    {/* Product Image */}
+                    <div className="w-20 h-20 flex-shrink-0 bg-muted">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ImageIcon className="w-6 h-6 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 p-3">
+                      <div className="flex items-start justify-between">
+                        <p className="font-medium text-sm">{item.name}</p>
+                        <p className="text-sm font-serif font-bold text-primary">₹{parseFloat(item.price).toLocaleString()}</p>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{formatDate(item.created_at)}</span>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-lg font-serif font-bold text-primary">₹{item.price.toLocaleString()}</p>
-                </div>
-              </motion.div>
-            ))}
-          </TabsContent>
-
-          {/* Earnings Tab */}
-          <TabsContent value="earnings" className="flex-1 overflow-y-auto space-y-4 mt-0">
-            <div className="mb-2">
-              <p className="text-sm font-medium">कमाई का विवरण</p>
-              <p className="text-xs text-muted-foreground">Earnings Summary</p>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl p-5 shadow-soft"
-            >
-              <p className="text-sm text-muted-foreground">कुल कमाई / Total Earnings</p>
-              <p className="text-3xl font-serif font-bold text-primary mt-1">
-                ₹{earnings.total.toLocaleString()}
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-card rounded-xl p-4 shadow-soft"
-              >
-                <p className="text-xs text-muted-foreground">इस महीने</p>
-                <p className="text-lg font-serif font-bold text-foreground mt-1">
-                  ₹{earnings.thisMonth.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground">This Month</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-card rounded-xl p-4 shadow-soft"
-              >
-                <p className="text-xs text-muted-foreground">पिछले महीने</p>
-                <p className="text-lg font-serif font-bold text-foreground mt-1">
-                  ₹{earnings.lastMonth.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground">Last Month</p>
-              </motion.div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-accent/10 rounded-xl p-4 shadow-soft"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">लंबित भुगतान</p>
-                  <p className="text-xs text-muted-foreground">Pending Payment</p>
-                </div>
-                <p className="text-xl font-serif font-bold text-accent">
-                  ₹{earnings.pending.toLocaleString()}
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-card rounded-xl p-4 shadow-soft"
-            >
-              <p className="text-sm font-medium mb-3">महीनेवार कमाई</p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">जनवरी 2026</span>
-                  <span className="font-medium">₹12,450</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">दिसंबर 2025</span>
-                  <span className="font-medium">₹18,200</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">नवंबर 2025</span>
-                  <span className="font-medium">₹14,850</span>
-                </div>
-              </div>
-            </motion.div>
+                </motion.div>
+              ))
+            )}
           </TabsContent>
         </Tabs>
       </div>

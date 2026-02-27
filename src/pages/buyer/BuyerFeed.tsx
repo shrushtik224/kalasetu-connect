@@ -1,64 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Volume2, VolumeX, Heart, Share2, CheckCircle, ChevronLeft } from "lucide-react";
+import {
+  Heart,
+  Share2,
+  ChevronLeft,
+  ShoppingCart,
+  Search,
+  MapPin,
+  Star,
+  Loader2,
+  Package,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/Logo";
-import artisanWorking from "@/assets/artisan-working.jpg";
-import weaverArtisan from "@/assets/weaver-artisan.jpg";
 import artisanPortrait from "@/assets/artisan-portrait.jpg";
+import { getAllPublishedProducts } from "@/integrations/supabase/products";
 
-interface FeedItem {
+interface Product {
   id: number;
-  video: string;
-  artisanName: string;
-  location: string;
-  productTitle: string;
-  price: number;
-  verified: boolean;
-  artisanPhoto: string;
+  name: string;
+  price: string;
+  description: string;
+  image_url: string | null;
+  user_id: string;
+  status: string;
+  created_at: string;
 }
-
-const feedItems: FeedItem[] = [
-  {
-    id: 1,
-    video: artisanWorking,
-    artisanName: "Ramesh Kumar",
-    location: "Bihar",
-    productTitle: "Madhubani Clay Vase",
-    price: 1200,
-    verified: true,
-    artisanPhoto: artisanPortrait,
-  },
-  {
-    id: 2,
-    video: weaverArtisan,
-    artisanName: "Lakshmi Devi",
-    location: "Rajasthan",
-    productTitle: "Handwoven Silk Stole",
-    price: 2400,
-    verified: true,
-    artisanPhoto: artisanPortrait,
-  },
-];
 
 const BuyerFeed = () => {
   const navigate = useNavigate();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [likedItems, setLikedItems] = useState<Set<number>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const currentItem = feedItems[currentIndex];
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
-  const handleScroll = (direction: "up" | "down") => {
-    if (direction === "down" && currentIndex < feedItems.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else if (direction === "up" && currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+  const loadProducts = async () => {
+    try {
+      const data = await getAllPublishedProducts();
+      setProducts((data as any) || []);
+    } catch (error) {
+      console.error("Error loading products:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const toggleLike = (id: number) => {
+  const toggleLike = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
     const newLiked = new Set(likedItems);
     if (newLiked.has(id)) {
       newLiked.delete(id);
@@ -68,150 +61,158 @@ const BuyerFeed = () => {
     setLikedItems(newLiked);
   };
 
+  const filteredProducts = products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="h-screen bg-black overflow-hidden">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 p-4 flex items-center justify-between">
-        <button
-          onClick={() => navigate("/")}
-          className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            onClick={() => navigate("/")}
+            className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </button>
           <Logo size="sm" showText={false} />
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search handcrafted products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-gray-100 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 transition-all"
+            />
+          </div>
         </div>
-        <button
-          onClick={() => setIsMuted(!isMuted)}
-          className="w-10 h-10 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white"
-        >
-          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-        </button>
+
+        {/* Category chips */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
+          {["All", "Pottery", "Textiles", "Painting", "Jewelry", "Woodwork"].map(
+            (cat, i) => (
+              <button
+                key={cat}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-all ${i === 0
+                  ? "bg-orange-500 text-white shadow-sm"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-orange-300"
+                  }`}
+              >
+                {cat}
+              </button>
+            )
+          )}
+        </div>
       </header>
 
-      {/* Video Feed */}
-      <div 
-        className="h-full snap-y snap-mandatory overflow-y-scroll"
-        onWheel={(e) => {
-          if (e.deltaY > 0) handleScroll("down");
-          else handleScroll("up");
-        }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentItem.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="h-full snap-start relative"
-          >
-            {/* Video/Image */}
-            <img
-              src={currentItem.video}
-              alt={currentItem.productTitle}
-              className="w-full h-full object-cover"
-            />
-
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
-
-            {/* Right Side Actions */}
-            <div className="absolute right-4 bottom-32 flex flex-col gap-6">
-              {/* Like */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => toggleLike(currentItem.id)}
-                className="flex flex-col items-center gap-1"
-              >
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${likedItems.has(currentItem.id) ? 'bg-red-500' : 'bg-white/20 backdrop-blur-sm'}`}>
-                  <Heart 
-                    className={`w-6 h-6 ${likedItems.has(currentItem.id) ? 'text-white fill-white' : 'text-white'}`} 
-                  />
-                </div>
-                <span className="text-white text-xs">234</span>
-              </motion.button>
-
-              {/* Share */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                className="flex flex-col items-center gap-1"
-              >
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                  <Share2 className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-white text-xs">Share</span>
-              </motion.button>
-
-              {/* Artisan Photo */}
-              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
-                <img 
-                  src={currentItem.artisanPhoto} 
-                  alt={currentItem.artisanName}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Bottom Info */}
-            <div className="absolute bottom-0 left-0 right-20 p-4 pb-8">
-              {/* Artisan Info */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-white font-medium">
-                  {currentItem.artisanName}
-                </span>
-                <span className="text-white/60">•</span>
-                <span className="text-white/80 text-sm">{currentItem.location}</span>
-                {currentItem.verified && (
-                  <span className="flex items-center gap-1 bg-success/20 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                    <CheckCircle className="w-3 h-3 text-success" />
-                    <span className="text-success text-xs">Verified</span>
-                  </span>
-                )}
-              </div>
-
-              {/* Product Title */}
-              <h2 className="text-white text-xl font-serif mb-3">
-                {currentItem.productTitle}
-              </h2>
-
-              {/* Price & CTA */}
-              <div className="flex items-center gap-4">
-                <span className="text-2xl font-serif font-bold text-white">
-                  ₹{currentItem.price.toLocaleString()}
-                </span>
-                <Button
-                  onClick={() => navigate(`/buyer/product/${currentItem.id}`)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6"
-                >
-                  View Details
-                </Button>
-              </div>
-            </div>
-
-            {/* Scroll Indicator */}
-            {currentIndex < feedItems.length - 1 && (
+      {/* Content */}
+      <main className="px-4 py-4">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-orange-500 animate-spin mb-3" />
+            <p className="text-sm text-gray-500">Loading products...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Package className="w-12 h-12 text-gray-300 mb-3" />
+            <p className="text-gray-500 font-medium">No products found</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Check back soon for new handcrafted items!
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {filteredProducts.map((product, index) => (
               <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
-                className="absolute bottom-2 left-1/2 -translate-x-1/2"
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.08 }}
+                onClick={() => navigate(`/buyer/product/${product.id}`)}
+                className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg hover:border-orange-200 transition-all cursor-pointer"
               >
-                <div className="w-8 h-1 bg-white/50 rounded-full" />
-              </motion.div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+                {/* Product Image */}
+                <div className="relative aspect-square bg-gray-100">
+                  {product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="w-10 h-10 text-gray-300" />
+                    </div>
+                  )}
 
-      {/* Feed Progress */}
-      <div className="fixed top-20 left-4 flex flex-col gap-1">
-        {feedItems.map((_, i) => (
-          <div
-            key={i}
-            className={`w-1 h-8 rounded-full transition-colors ${i === currentIndex ? 'bg-white' : 'bg-white/30'}`}
-          />
-        ))}
-      </div>
+                  {/* Like Button */}
+                  <button
+                    onClick={(e) => toggleLike(e, product.id)}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+                  >
+                    <Heart
+                      className={`w-4 h-4 ${likedItems.has(product.id)
+                        ? "text-red-500 fill-red-500"
+                        : "text-gray-500"
+                        }`}
+                    />
+                  </button>
+
+                  {/* Verified Badge */}
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-green-500/90 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                    <Star className="w-2.5 h-2.5 fill-white" />
+                    Handmade
+                  </div>
+                </div>
+
+                {/* Product Info */}
+                <div className="p-3">
+                  <h3 className="text-sm font-semibold text-gray-800 line-clamp-1">
+                    {product.name}
+                  </h3>
+                  <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">
+                    {product.description || "Handcrafted with love"}
+                  </p>
+
+                  {/* Artisan info */}
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <img
+                      src={artisanPortrait}
+                      alt=""
+                      className="w-4 h-4 rounded-full object-cover"
+                    />
+                    <span className="text-[10px] text-gray-500 truncate">
+                      KalaSetu Artisan
+                    </span>
+                  </div>
+
+                  {/* Price and CTA */}
+                  <div className="flex items-center justify-between mt-2.5">
+                    <span className="text-base font-bold text-orange-600">
+                      ₹{parseFloat(product.price).toLocaleString("en-IN")}
+                    </span>
+                    <Button
+                      size="sm"
+                      className="h-7 px-3 text-[10px] bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/buyer/product/${product.id}`);
+                      }}
+                    >
+                      <ShoppingCart className="w-3 h-3 mr-1" />
+                      Buy
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 };

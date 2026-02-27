@@ -14,7 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      products: {
+        Row: {
+          id: number
+          user_id: string
+          name: string
+          price: string
+          description: string | null
+          video_path: string | null
+          image_url: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          user_id: string
+          name: string
+          price: string | number
+          description?: string | null
+          video_path?: string | null
+          image_url?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          user_id?: string
+          name?: string
+          price?: string | number
+          description?: string | null
+          video_path?: string | null
+          image_url?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      orders: {
+        Row: {
+          id: number
+          buyer_id: string
+          product_id: number
+          artisan_id: string
+          quantity: number
+          total_price: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          buyer_id: string
+          product_id: number
+          artisan_id: string
+          quantity?: number
+          total_price: string | number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          buyer_id?: string
+          product_id?: number
+          artisan_id?: string
+          quantity?: number
+          total_price?: string | number
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: number
+          artisan_id: string
+          order_id: number
+          message: string
+          status: string
+          created_at: string
+          read_at: string | null
+        }
+        Insert: {
+          id?: number
+          artisan_id: string
+          order_id: number
+          message: string
+          status?: string
+          created_at?: string
+          read_at?: string | null
+        }
+        Update: {
+          id?: number
+          artisan_id?: string
+          order_id?: number
+          message?: string
+          status?: string
+          created_at?: string
+          read_at?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
