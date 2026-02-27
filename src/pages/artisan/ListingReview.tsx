@@ -44,6 +44,7 @@ const ListingReview = () => {
   const [description, setDescription] = useState(initialDescription);
   const [imageUrl, setImageUrl] = useState<string>(passedImageUrl || "");
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
 
@@ -195,16 +196,18 @@ const ListingReview = () => {
               <label className="text-sm font-medium text-muted-foreground block mb-2">
                 Suggested Price / सुझाई गई कीमत
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-muted/20 p-2 rounded-lg border border-border focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                 <span className="text-2xl font-serif font-bold text-primary">₹</span>
                 <Input
+                  type="number"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   className="text-2xl font-serif font-bold text-primary border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
+                  placeholder="0"
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Based on similar items and your craft quality
+                Based on similar items and your craft quality. You can adjust this manually.
               </p>
             </motion.div>
 
@@ -215,10 +218,28 @@ const ListingReview = () => {
               transition={{ delay: 0.55 }}
               className="bg-card rounded-xl p-4 shadow-soft"
             >
-              <label className="text-sm font-medium text-muted-foreground block mb-2">
-                Description / विवरण
-              </label>
-              <p className="text-sm text-foreground">{description}</p>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Description / विवरण
+                </label>
+                <button
+                  onClick={() => setIsEditingDescription(!isEditingDescription)}
+                  className="text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              </div>
+              {isEditingDescription ? (
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full min-h-[100px] bg-muted/20 border border-border rounded-lg p-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  autoFocus
+                  onBlur={() => setIsEditingDescription(false)}
+                />
+              ) : (
+                <p className="text-sm text-foreground leading-relaxed">{description}</p>
+              )}
             </motion.div>
 
             {/* AI Confidence */}

@@ -12,6 +12,7 @@ import {
   Package,
   ArrowRight,
   Star,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/ui/Logo";
@@ -118,14 +119,18 @@ const ArtisanDashboard = () => {
           <div className="flex items-center justify-between">
             <Logo size="sm" showText={false} />
             <div className="flex items-center gap-2">
-              {/* Notification Bell */}
+              {/* Notification Bell / Close Button */}
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setNotificationsPanelOpen(true)}
-                className="relative w-11 h-11 rounded-2xl bg-white/60 backdrop-blur-md border border-white/40 shadow-sm flex items-center justify-center hover:bg-white/80 transition-all"
+                onClick={() => setNotificationsPanelOpen(!notificationsPanelOpen)}
+                className="relative w-11 h-11 rounded-2xl bg-white/60 backdrop-blur-md border border-white/40 shadow-sm flex items-center justify-center hover:bg-white/80 transition-all z-50"
               >
-                <Bell className="w-5 h-5 text-gray-700" />
-                {unreadCount > 0 && (
+                {notificationsPanelOpen ? (
+                  <X className="w-5 h-5 text-gray-700" />
+                ) : (
+                  <Bell className="w-5 h-5 text-gray-700" />
+                )}
+                {!notificationsPanelOpen && unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
