@@ -15,8 +15,12 @@ import ListingReview from "./pages/artisan/ListingReview";
 import PriceEstimator from "./pages/artisan/PriceEstimator";
 import BuyerFeed from "./pages/buyer/BuyerFeed";
 import ProductDetail from "./pages/buyer/ProductDetail";
+import OrderHistory from "./pages/buyer/OrderHistory";
+import BuyerAuth from "./pages/buyer/BuyerAuth";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import ArtisanLayout from "./components/ArtisanLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 import LanguageSelector from "./components/LanguageSelector";
 import { LanguageProvider } from "./contexts/LanguageContext";
 
@@ -31,7 +35,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
-              <Route path="/" element={<Navigate to="/artisan" replace />} />
+              <Route path="/" element={<LandingPage />} />
 
               {/* Artisan Flow */}
               <Route path="/artisan" element={<ArtisanLogin />} />
@@ -50,8 +54,22 @@ const App = () => (
               </Route>
 
               {/* Buyer Flow */}
-              <Route path="/buyer" element={<BuyerFeed />} />
-              <Route path="/buyer/product/:id" element={<ProductDetail />} />
+              <Route path="/buyer/auth" element={<BuyerAuth />} />
+              <Route path="/buyer" element={
+                <ProtectedRoute>
+                  <BuyerFeed />
+                </ProtectedRoute>
+              } />
+              <Route path="/buyer/product/:id" element={
+                <ProtectedRoute>
+                  <ProductDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/buyer/orders" element={
+                <ProtectedRoute>
+                  <OrderHistory />
+                </ProtectedRoute>
+              } />
 
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
