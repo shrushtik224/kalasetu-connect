@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Check, Edit2, Package, Minus, Plus } from "lucide-react";
+import { Check, Edit2, Package, Minus, Plus, Camera, ImagePlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,78 @@ const ListingReview = () => {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [stock, setStock] = useState(1);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        variant: "destructive",
+        title: "त्रुटि (Error)",
+        description: "Please select an image file (JPG, PNG, etc.)",
+        duration: 4000,
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "त्रुटि (Error)",
+        description: "Image size should be less than 5MB",
+        duration: 4000,
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      const userId = user?.id || "anon_user";
+      const timestamp = Date.now();
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${userId}/${timestamp}_product.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from("product_images")
+        .upload(fileName, file, {
+          contentType: file.type,
+        });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from("product_images")
+        .getPublicUrl(data.path);
+
+      setImageUrl(urlData.publicUrl);
+
+      toast({
+        title: "✅ फोटो अपलोड हो गई!",
+        description: "Product photo updated successfully.",
+        duration: 3000,
+      });
+    } catch (error: any) {
+      console.error("Image upload error:", error);
+      toast({
+        variant: "destructive",
+        title: "अपलोड विफल (Upload Failed)",
+        description: error.message || "Failed to upload image. Please try again.",
+        duration: 4000,
+      });
+    } finally {
+      setIsUploadingImage(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
 
 
@@ -116,12 +188,12 @@ const ListingReview = () => {
           transition={{ duration: 0.5 }}
           className="max-w-md mx-auto"
         >
-          {/* Video Thumbnail */}
+          {/* Product Image with Upload Option */}
           <motion.div
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="relative aspect-square rounded-xl overflow-hidden shadow-card mb-6"
+            className="relative aspect-square rounded-xl overflow-hidden shadow-card mb-6 group"
           >
             <img
               src={imageUrl || "/placeholder.svg"}
@@ -134,6 +206,47 @@ const ListingReview = () => {
                 AI Processed
               </Badge>
             </div>
+
+            {/* Upload Photo Overlay */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center gap-2 text-white"
+              >
+                {isUploadingImage ? (
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                ) : (
+                  <Camera className="w-8 h-8 drop-shadow-lg" />
+                )}
+                <span className="text-sm font-medium drop-shadow-lg">
+                  {isUploadingImage ? "Uploading..." : "Change Photo"}
+                </span>
+              </button>
+            </div>
+
+            {/* Always-visible upload button at bottom-right */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingImage}
+              className="absolute bottom-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-sm text-foreground rounded-lg shadow-md hover:bg-white transition-colors text-xs font-medium disabled:opacity-50"
+            >
+              {isUploadingImage ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <ImagePlus className="w-3.5 h-3.5" />
+              )}
+              {isUploadingImage ? "Uploading..." : "Upload Photo"}
+            </button>
           </motion.div>
 
           {/* AI Detected Fields */}
