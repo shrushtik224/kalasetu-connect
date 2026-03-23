@@ -24,6 +24,8 @@ export type Database = {
           video_path: string | null
           image_url: string | null
           status: string
+          stock: number
+          is_approved: boolean
           created_at: string
           updated_at: string
         }
@@ -36,6 +38,8 @@ export type Database = {
           video_path?: string | null
           image_url?: string | null
           status?: string
+          stock?: number
+          is_approved?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -48,6 +52,8 @@ export type Database = {
           video_path?: string | null
           image_url?: string | null
           status?: string
+          stock?: number
+          is_approved?: boolean
           created_at?: string
           updated_at?: string
         }

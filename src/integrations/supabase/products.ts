@@ -9,6 +9,8 @@ export interface ProductData {
   image_url?: string;
   imageFile?: File;
   status?: string;
+  stock?: number;
+  is_approved?: boolean;
 }
 
 /**
@@ -64,6 +66,8 @@ export const insertProduct = async (
       video_path: productData.video_path || null,
       image_url: imageUrl || null,
       status: productData.status || "published",
+      stock: productData.stock ?? 1,
+      is_approved: true,
     };
 
     const { data, error } = await supabase

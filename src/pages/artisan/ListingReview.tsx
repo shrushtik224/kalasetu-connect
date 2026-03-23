@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Check, Edit2 } from "lucide-react";
+import { Check, Edit2, Package, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,7 @@ const ListingReview = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [stock, setStock] = useState(1);
 
 
 
@@ -71,6 +72,7 @@ const ListingReview = () => {
         image_url: imageUrl || undefined,
         video_path: videoPath || undefined,
         status: "published",
+        stock: stock || 1,
       });
 
       toast({
@@ -240,6 +242,45 @@ const ListingReview = () => {
               ) : (
                 <p className="text-sm text-foreground leading-relaxed">{description}</p>
               )}
+            </motion.div>
+
+            {/* Stock Quantity */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.58 }}
+              className="bg-card rounded-xl p-4 shadow-soft"
+            >
+              <label className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-3">
+                <Package className="w-4 h-4" />
+                Stock Available / स्टॉक उपलब्ध
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStock(Math.max(1, stock - 1))}
+                  className="w-10 h-10 rounded-xl bg-muted/40 border border-border flex items-center justify-center hover:bg-muted/60 transition-colors"
+                >
+                  <Minus className="w-4 h-4 text-foreground" />
+                </button>
+                <Input
+                  type="number"
+                  min="1"
+                  value={stock}
+                  onChange={(e) => setStock(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="text-center text-xl font-serif font-bold w-24 border-0 bg-muted/20 focus-visible:ring-primary/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setStock(stock + 1)}
+                  className="w-10 h-10 rounded-xl bg-muted/40 border border-border flex items-center justify-center hover:bg-muted/60 transition-colors"
+                >
+                  <Plus className="w-4 h-4 text-foreground" />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                How many pieces do you have ready to sell?
+              </p>
             </motion.div>
 
             {/* AI Confidence */}

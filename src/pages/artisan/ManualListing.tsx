@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, X } from "lucide-react";
+import { ArrowLeft, Upload, X, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ const ManualListing = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [stock, setStock] = useState("");
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -123,6 +124,7 @@ const ManualListing = () => {
         description: description,
         image_url: imageUrl,
         status: "published",
+        stock: parseInt(stock) || 1,
       });
 
       toast({
@@ -239,6 +241,31 @@ const ManualListing = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="अपने उत्पाद के बारे में बताएं..."
               />
+            </div>
+
+            {/* Stock Quantity Field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Package className="w-4 h-4 text-primary" />
+                स्टॉक उपलब्ध (Stock Available)
+              </label>
+              <div className="relative">
+                <Input
+                  required
+                  type="number"
+                  min="1"
+                  value={stock}
+                  onChange={(e) => setStock(e.target.value)}
+                  placeholder="कितने उपलब्ध हैं?"
+                  className="pl-4 pr-16"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">
+                  pieces
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter how many items you have ready to sell
+              </p>
             </div>
 
             <Button
